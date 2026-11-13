@@ -1,6 +1,92 @@
 import Phaser from "phaser";
 import { Actor, type Arena, WIDTH } from "./actors.ts";
 
+interface PrefabStats {
+  texture: string;
+  hp: number;
+  score: number;
+  radius: number;
+  dropChance: number;
+  canShoot: boolean;
+  isPickup: boolean;
+}
+
+const PREFAB_STATS = {
+  drone: {
+    texture: "drone",
+    hp: 2,
+    score: 100,
+    radius: 13,
+    dropChance: 0.015,
+    canShoot: true,
+    isPickup: false,
+  },
+  dart: {
+    texture: "dart",
+    hp: 1,
+    score: 150,
+    radius: 12,
+    dropChance: 0.015,
+    canShoot: false,
+    isPickup: false,
+  },
+  turret: {
+    texture: "turret",
+    hp: 12,
+    score: 400,
+    radius: 19,
+    dropChance: 0.3,
+    canShoot: true,
+    isPickup: false,
+  },
+  lancer: {
+    texture: "lancer",
+    hp: 4,
+    score: 250,
+    radius: 15,
+    dropChance: 0.06,
+    canShoot: true,
+    isPickup: false,
+  },
+  boss: {
+    texture: "boss",
+    hp: 900,
+    score: 10000,
+    radius: 46,
+    dropChance: 0,
+    canShoot: true,
+    isPickup: false,
+  },
+  spread: {
+    texture: "spread",
+    hp: 0,
+    score: 0,
+    radius: 14,
+    dropChance: 0,
+    canShoot: false,
+    isPickup: true,
+  },
+  shield: {
+    texture: "shield",
+    hp: 0,
+    score: 0,
+    radius: 14,
+    dropChance: 0,
+    canShoot: false,
+    isPickup: true,
+  },
+} as const satisfies Record<string, PrefabStats>;
+
+type PrefabKind = keyof typeof PREFAB_STATS;
+
+interface PrefabOptions {
+  kind: PrefabKind;
+  x: number;
+  y: number;
+  homeX?: number;
+  side?: number;
+}
+
 function aim(from: { x: number; y: number }, arena: Arena): number {
   return Math.atan2(arena.player.y - from.y, arena.player.x - from.x);
 }
@@ -10,28 +96,35 @@ function aim(from: { x: number; y: number }, arena: Arena): number {
  * boss and power-ups. kind is the prefab's name and also its texture key.
  */
 export class ShmupPrefabSprite extends Actor {
+  readonly kind: PrefabKind;
+  hp: number;
+  readonly score: number;
+  readonly dropChance: number;
+  readonly canShoot: boolean;
+  readonly isPickup: boolean;
+  readonly homeX: number;
+  readonly side: number;
+
   maxHp: number;
   flash = 0;
   heading = 0;
-  // spin: turrets rotate using this
   spin = 0;
 
-  constructor(
-    scene: Phaser.Scene,
-    x: number,
-    y: number,
-    public kind: string,
-    public hp: number,
-    public score: number,
-    radius: number,
-    public dropChance: number,
-    public canShoot: boolean,
-    public isPickup: boolean,
-    public homeX: number,
-    public side: number,
-  ) {
-    super(scene, x, y, kind, radius);
-    this.maxHp = hp;
+  constructor(scene: Phaser.Scene, options: PrefabOptions) {
+    const { kind, x, y, homeX = x, side = 1 } = options;
+    const stats = PREFAB_STATS[kind];
+
+    super(scene, x, y, stats.texture, stats.radius);
+
+    this.kind = kind;
+    this.hp = stats.hp;
+    this.maxHp = stats.hp;
+    this.score = stats.score;
+    this.dropChance = stats.dropChance;
+    this.canShoot = stats.canShoot;
+    this.isPickup = stats.isPickup;
+    this.homeX = homeX;
+    this.side = side;
   }
 
   step(arena: Arena): void {
@@ -121,20 +214,11 @@ export class ShmupBoss extends ShmupPrefabSprite {
   readonly core: Phaser.GameObjects.Image;
 
   constructor(scene: Phaser.Scene) {
-    super(
-      scene,
-      WIDTH / 2,
-      -90,
-      "boss",
-      900,
-      10000,
-      46,
-      0,
-      true,
-      false,
-      WIDTH / 2,
-      1,
-    );
+    super(scene, {
+      kind: "boss",
+      x: WIDTH / 2,
+      y: -90,
+    });
     this.core = scene.add.image(this.x, this.y, "boss-core").setBlendMode(
       Phaser.BlendModes.ADD,
     );
@@ -208,8 +292,13 @@ export class ShmupBoss extends ShmupPrefabSprite {
 }
 
 export class ShmupPowerUp extends ShmupPrefabSprite {
-  constructor(scene: Phaser.Scene, x: number, y: number, kind) {
-    super(scene, x, y, kind, 0, 0, 14, 0, false, true, x, 1);
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    kind: "spread" | "shield",
+  ) {
+    super(scene, { kind, x, y });
   }
 
   override step(): void {

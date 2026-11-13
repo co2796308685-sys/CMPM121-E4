@@ -17,37 +17,6 @@ import { loadSounds, play } from "./sounds.ts";
 import { makeTextures, TINTS } from "./textures.ts";
 import { Backdrop } from "./backdrop.ts";
 
-const ENEMY_STATS = {
-  drone: {
-    hp: 2,
-    score: 100,
-    radius: 13,
-    dropChance: 0.015,
-    canShoot: true,
-  },
-  dart: {
-    hp: 1,
-    score: 150,
-    radius: 12,
-    dropChance: 0.015,
-    canShoot: false,
-  },
-  turret: {
-    hp: 12,
-    score: 400,
-    radius: 19,
-    dropChance: 0.3,
-    canShoot: true,
-  },
-  lancer: {
-    hp: 4,
-    score: 250,
-    radius: 15,
-    dropChance: 0.06,
-    canShoot: true,
-  },
-} as const;
-
 const TICK_MS = 1000 / 60;
 const START_LIVES = 3;
 const BOSS_WARNING_TICKS = 200;
@@ -346,20 +315,12 @@ export class GameScene extends Phaser.Scene implements Arena {
 
   summon(_kind: string, x: number, y: number): void {
     this.enemies.push(
-      new ShmupPrefabSprite(
-        this,
+      new ShmupPrefabSprite(this, {
+        kind: "drone",
         x,
         y,
-        "drone",
-        2,
-        100,
-        13,
-        0.015,
-        true,
-        false,
-        x,
-        x < WIDTH / 2 ? 1 : -1,
-      ),
+        side: x < WIDTH / 2 ? 1 : -1,
+      }),
     );
   }
 
@@ -450,8 +411,6 @@ export class GameScene extends Phaser.Scene implements Arena {
   }
 
   private spawnWave(wave: Wave, t: number): void {
-    const stats = ENEMY_STATS[wave.kind];
-
     for (let i = 0; i < wave.count; i++) {
       const offset = i - (wave.count - 1) / 2;
 
@@ -473,20 +432,12 @@ export class GameScene extends Phaser.Scene implements Arena {
 
       const y = wave.formation === "pincer" ? 70 + Math.floor(i / 2) * 50 : -30;
 
-      const enemy = new ShmupPrefabSprite(
-        this,
+      const enemy = new ShmupPrefabSprite(this, {
+        kind: wave.kind,
         x,
         y,
-        wave.kind,
-        stats.hp,
-        stats.score,
-        stats.radius,
-        stats.dropChance,
-        stats.canShoot,
-        false,
-        x,
-        i % 2 === 0 ? 1 : -1,
-      );
+        side: i % 2 === 0 ? 1 : -1
+      });
 
       this.enemies.push(enemy);
     }
