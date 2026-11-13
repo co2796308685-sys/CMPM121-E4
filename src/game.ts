@@ -436,7 +436,7 @@ export class GameScene extends Phaser.Scene implements Arena {
         kind: wave.kind,
         x,
         y,
-        side: i % 2 === 0 ? 1 : -1
+        side: i % 2 === 0 ? 1 : -1,
       });
 
       this.enemies.push(enemy);
